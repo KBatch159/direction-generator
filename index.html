@@ -18,6 +18,7 @@
             font-size: 2em;
             margin: 20px;
             color: #007bff;
+            transition: opacity 0.5s ease-in-out;
         }
         button {
             padding: 10px 20px;
@@ -60,7 +61,7 @@
     </div>
 
     <div id="map"></div>
-    <div id="distance">Distance Travelled: 0 m</div>
+    <div id="distance">Distance Travelled: 0.00 km</div>
 
     <script>
         let map = L.map('map').setView([51.505, -0.09], 13); // Default to London
@@ -83,7 +84,14 @@
         function generateDirection() {
             const directions = ["Left", "Right", "Straight"];
             const randomIndex = Math.floor(Math.random() * directions.length);
-            document.getElementById('direction').innerText = directions[randomIndex];
+            const directionElement = document.getElementById('direction');
+            
+            // Add fade-out and fade-in animation
+            directionElement.style.opacity = 0;
+            setTimeout(() => {
+                directionElement.innerText = directions[randomIndex];
+                directionElement.style.opacity = 1;
+            }, 500); // Delay matches the fade-out time
         }
 
         function startTracking() {
@@ -97,8 +105,8 @@
                         const userLon = position.coords.longitude;
 
                         if (tracking) {
-                            // Update map view
-                            map.setView([userLat, userLon], 15);
+                            // Preserve the map's current zoom and position
+                            const currentZoom = map.getZoom();
 
                             // Add or move marker
                             if (marker) {
@@ -120,9 +128,12 @@
                                 );
                                 totalDistance += distance;
                                 document.getElementById('distance').innerText =
-                                    `Distance Travelled: ${totalDistance.toFixed(2)} m`;
+                                    `Distance Travelled: ${(totalDistance / 1000).toFixed(2)} km`; // Convert to km
                             }
                             previousPosition = { lat: userLat, lon: userLon };
+
+                            // Update map without resetting zoom
+                            map.setView([userLat, userLon], currentZoom, { animate: false });
                         }
                     },
                     function (error) {
@@ -147,7 +158,7 @@
         function finishTracking() {
             if (tracking) {
                 pauseTracking();
-                alert(`Session finished! Total distance travelled: ${totalDistance.toFixed(2)} m`);
+                alert(`Session finished! Total distance travelled: ${(totalDistance / 1000).toFixed(2)} km`);
             }
         }
 
@@ -161,7 +172,7 @@
                 marker = null;
             }
             previousPosition = null;
-            document.getElementById('distance').innerText = "Distance Travelled: 0 m";
+            document.getElementById('distance').innerText = "Distance Travelled: 0.00 km";
             document.getElementById('direction').innerText = "---";
             map.setView([51.505, -0.09], 13); // Reset map view
         }
