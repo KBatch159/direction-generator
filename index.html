@@ -21,12 +21,13 @@
         }
         button {
             padding: 10px 20px;
-            font-size: 1.2em;
+            font-size: 1em;
             color: #fff;
             background-color: #007bff;
             border: none;
             border-radius: 5px;
             cursor: pointer;
+            margin: 5px;
         }
         button:hover {
             background-color: #0056b3;
@@ -50,92 +51,133 @@
     <p>Click the button to get your next direction!</p>
     <div id="direction">---</div>
     <button onclick="generateDirection()">Choose Direction</button>
-    
+
+    <div>
+        <button onclick="startTracking()">Start</button>
+        <button onclick="pauseTracking()">Pause</button>
+        <button onclick="finishTracking()">Finish</button>
+        <button onclick="newTracking()">New</button>
+    </div>
+
     <div id="map"></div>
     <div id="distance">Distance Travelled: 0 m</div>
 
     <script>
-        function generateDirection() {
-            const directions = ["Left", "Right", "Straight"];
-            const randomIndex = Math.floor(Math.random() * directions.length);
-            document.getElementById('direction').innerText = directions[randomIndex];
-        }
-
-        // Initialise the map
-        const map = L.map('map').setView([51.505, -0.09], 13); // Default to London
+        let map = L.map('map').setView([51.505, -0.09], 13); // Default to London
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
         }).addTo(map);
 
-        // Custom black dot icon
         const blackDotIcon = L.divIcon({
             className: 'custom-icon',
             html: '<div style="width: 10px; height: 10px; background: black; border-radius: 50%;"></div>',
         });
 
         let marker;
-        let path = L.polyline([], { color: 'blue' }).addTo(map); // Path to track movement
+        let path = L.polyline([], { color: 'blue' }).addTo(map);
         let previousPosition = null;
         let totalDistance = 0;
+        let tracking = false; // Flag to control tracking
+        let watchId; // Store the geolocation watch ID
 
-        // Function to calculate distance between two coordinates
+        function generateDirection() {
+            const directions = ["Left", "Right", "Straight"];
+            const randomIndex = Math.floor(Math.random() * directions.length);
+            document.getElementById('direction').innerText = directions[randomIndex];
+        }
+
+        function startTracking() {
+            if (tracking) return; // Prevent multiple starts
+            tracking = true;
+
+            if (navigator.geolocation) {
+                watchId = navigator.geolocation.watchPosition(
+                    function (position) {
+                        const userLat = position.coords.latitude;
+                        const userLon = position.coords.longitude;
+
+                        if (tracking) {
+                            // Update map view
+                            map.setView([userLat, userLon], 15);
+
+                            // Add or move marker
+                            if (marker) {
+                                marker.setLatLng([userLat, userLon]);
+                            } else {
+                                marker = L.marker([userLat, userLon], { icon: blackDotIcon }).addTo(map);
+                            }
+
+                            // Update path
+                            path.addLatLng([userLat, userLon]);
+
+                            // Calculate distance
+                            if (previousPosition) {
+                                const distance = calculateDistance(
+                                    previousPosition.lat,
+                                    previousPosition.lon,
+                                    userLat,
+                                    userLon
+                                );
+                                totalDistance += distance;
+                                document.getElementById('distance').innerText =
+                                    `Distance Travelled: ${totalDistance.toFixed(2)} m`;
+                            }
+                            previousPosition = { lat: userLat, lon: userLon };
+                        }
+                    },
+                    function (error) {
+                        alert("Unable to retrieve your location: " + error.message);
+                    },
+                    { enableHighAccuracy: true }
+                );
+            } else {
+                alert("Geolocation is not supported by this browser.");
+            }
+        }
+
+        function pauseTracking() {
+            if (tracking) {
+                tracking = false;
+                if (watchId) {
+                    navigator.geolocation.clearWatch(watchId); // Stop tracking location
+                }
+            }
+        }
+
+        function finishTracking() {
+            if (tracking) {
+                pauseTracking();
+                alert(`Session finished! Total distance travelled: ${totalDistance.toFixed(2)} m`);
+            }
+        }
+
+        function newTracking() {
+            // Reset everything
+            pauseTracking();
+            totalDistance = 0;
+            path.setLatLngs([]); // Clear the path
+            if (marker) {
+                map.removeLayer(marker); // Remove the marker
+                marker = null;
+            }
+            previousPosition = null;
+            document.getElementById('distance').innerText = "Distance Travelled: 0 m";
+            document.getElementById('direction').innerText = "---";
+            map.setView([51.505, -0.09], 13); // Reset map view
+        }
+
         function calculateDistance(lat1, lon1, lat2, lon2) {
             const R = 6371000; // Earth's radius in metres
             const toRadians = (degrees) => degrees * Math.PI / 180;
 
             const dLat = toRadians(lat2 - lat1);
             const dLon = toRadians(lon2 - lon1);
-            const a = 
+            const a =
                 Math.sin(dLat / 2) * Math.sin(dLat / 2) +
                 Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
                 Math.sin(dLon / 2) * Math.sin(dLon / 2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
             return R * c;
-        }
-
-        // Watch user's location
-        if (navigator.geolocation) {
-            navigator.geolocation.watchPosition(
-                function (position) {
-                    const userLat = position.coords.latitude;
-                    const userLon = position.coords.longitude;
-
-                    // Update map view
-                    map.setView([userLat, userLon], 15);
-
-                    // Add or move marker
-                    if (marker) {
-                        marker.setLatLng([userLat, userLon]);
-                    } else {
-                        marker = L.marker([userLat, userLon], { icon: blackDotIcon }).addTo(map);
-                    }
-
-                    // Update path
-                    path.addLatLng([userLat, userLon]);
-
-                    // Calculate distance
-                    if (previousPosition) {
-                        const distance = calculateDistance(
-                            previousPosition.lat,
-                            previousPosition.lon,
-                            userLat,
-                            userLon
-                        );
-                        totalDistance += distance;
-                        document.getElementById('distance').innerText = 
-                            `Distance Travelled: ${totalDistance.toFixed(2)} m`;
-                    }
-                    previousPosition = { lat: userLat, lon: userLon };
-                },
-                function (error) {
-                    alert("Unable to retrieve your location: " + error.message);
-                },
-                {
-                    enableHighAccuracy: true,
-                }
-            );
-        } else {
-            alert("Geolocation is not supported by this browser.");
         }
     </script>
 </body>
