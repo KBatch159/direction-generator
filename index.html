@@ -62,26 +62,18 @@
             maxZoom: 19,
         }).addTo(map);
 
-        // Get the user's location
+        // Add a marker for live location
+        let marker;
+
+        // Watch the user's location
         if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
+            navigator.geolocation.watchPosition(
                 function (position) {
                     const userLat = position.coords.latitude;
                     const userLon = position.coords.longitude;
-                    map.setView([userLat, userLon], 15); // Centre map on user's location
 
-                    // Add a marker for the user
-                    L.marker([userLat, userLon]).addTo(map)
-                        .bindPopup("You are here!")
-                        .openPopup();
-                },
-                function () {
-                    alert("Unable to retrieve your location.");
-                }
-            );
-        } else {
-            alert("Geolocation is not supported by this browser.");
-        }
-    </script>
-</body>
-</html>
+                    // Update map view to the new location
+                    map.setView([userLat, userLon], 15);
+
+                    // If
+
