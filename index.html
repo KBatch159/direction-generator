@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Direction Generator with Tracking</title>
+    <title>Direction Generator with Tracking and Map Rotation</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -44,8 +44,11 @@
             margin-top: 10px;
         }
     </style>
+    <!-- Leaflet Library -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Leaflet-RotateMap Plugin -->
+    <script src="https://unpkg.com/leaflet-rotatemap/dist/leaflet-rotatemap.min.js"></script>
 </head>
 <body>
     <h1>Direction Generator</h1>
@@ -64,7 +67,7 @@
     <div id="distance">Distance Travelled: 0.00 km</div>
 
     <script>
-        let map = L.map('map').setView([51.505, -0.09], 13); // Default to London
+        let map = L.map('map', { rotate: true }).setView([51.505, -0.09], 13); // Default to London
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
         }).addTo(map);
@@ -105,7 +108,6 @@
                         const userLon = position.coords.longitude;
 
                         if (tracking) {
-                            // Preserve the map's current zoom and position
                             const currentZoom = map.getZoom();
 
                             // Add or move marker
