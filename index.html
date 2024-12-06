@@ -31,19 +31,56 @@
         button:hover {
             background-color: #0056b3;
         }
+        #map {
+            height: 300px;
+            width: 100%;
+            margin-top: 20px;
+            border: 2px solid #ddd;
+        }
     </style>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
     <h1>Direction Generator</h1>
     <p>Click the button to get your next direction!</p>
     <div id="direction">---</div>
     <button onclick="generateDirection()">Choose Direction</button>
+    
+    <div id="map"></div>
 
     <script>
         function generateDirection() {
             const directions = ["Left", "Right", "Straight"];
             const randomIndex = Math.floor(Math.random() * directions.length);
             document.getElementById('direction').innerText = directions[randomIndex];
+        }
+
+        // Initialize the map
+        const map = L.map('map').setView([51.505, -0.09], 13); // Default to London
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+        }).addTo(map);
+
+        // Get the user's location
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function (position) {
+                    const userLat = position.coords.latitude;
+                    const userLon = position.coords.longitude;
+                    map.setView([userLat, userLon], 15); // Centre map on user's location
+
+                    // Add a marker for the user
+                    L.marker([userLat, userLon]).addTo(map)
+                        .bindPopup("You are here!")
+                        .openPopup();
+                },
+                function () {
+                    alert("Unable to retrieve your location.");
+                }
+            );
+        } else {
+            alert("Geolocation is not supported by this browser.");
         }
     </script>
 </body>
