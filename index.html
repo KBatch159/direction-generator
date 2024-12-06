@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Direction Generator</title>
+    <title>Direction Generator with Tracking</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -37,6 +37,10 @@
             margin-top: 20px;
             border: 2px solid #ddd;
         }
+        #distance {
+            font-size: 1.2em;
+            margin-top: 10px;
+        }
     </style>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -48,6 +52,7 @@
     <button onclick="generateDirection()">Choose Direction</button>
     
     <div id="map"></div>
+    <div id="distance">Distance Travelled: 0 m</div>
 
     <script>
         function generateDirection() {
@@ -56,24 +61,82 @@
             document.getElementById('direction').innerText = directions[randomIndex];
         }
 
-        // Initialize the map
+        // Initialise the map
         const map = L.map('map').setView([51.505, -0.09], 13); // Default to London
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
         }).addTo(map);
 
-        // Add a marker for live location
-        let marker;
+        // Custom black dot icon
+        const blackDotIcon = L.divIcon({
+            className: 'custom-icon',
+            html: '<div style="width: 10px; height: 10px; background: black; border-radius: 50%;"></div>',
+        });
 
-        // Watch the user's location
+        let marker;
+        let path = L.polyline([], { color: 'blue' }).addTo(map); // Path to track movement
+        let previousPosition = null;
+        let totalDistance = 0;
+
+        // Function to calculate distance between two coordinates
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371000; // Earth's radius in metres
+            const toRadians = (degrees) => degrees * Math.PI / 180;
+
+            const dLat = toRadians(lat2 - lat1);
+            const dLon = toRadians(lon2 - lon1);
+            const a = 
+                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+
+        // Watch user's location
         if (navigator.geolocation) {
             navigator.geolocation.watchPosition(
                 function (position) {
                     const userLat = position.coords.latitude;
                     const userLon = position.coords.longitude;
 
-                    // Update map view to the new location
+                    // Update map view
                     map.setView([userLat, userLon], 15);
 
-                    // If
+                    // Add or move marker
+                    if (marker) {
+                        marker.setLatLng([userLat, userLon]);
+                    } else {
+                        marker = L.marker([userLat, userLon], { icon: blackDotIcon }).addTo(map);
+                    }
 
+                    // Update path
+                    path.addLatLng([userLat, userLon]);
+
+                    // Calculate distance
+                    if (previousPosition) {
+                        const distance = calculateDistance(
+                            previousPosition.lat,
+                            previousPosition.lon,
+                            userLat,
+                            userLon
+                        );
+                        totalDistance += distance;
+                        document.getElementById('distance').innerText = 
+                            `Distance Travelled: ${totalDistance.toFixed(2)} m`;
+                    }
+                    previousPosition = { lat: userLat, lon: userLon };
+                },
+                function (error) {
+                    alert("Unable to retrieve your location: " + error.message);
+                },
+                {
+                    enableHighAccuracy: true,
+                }
+            );
+        } else {
+            alert("Geolocation is not supported by this browser.");
+        }
+    </script>
+</body>
+</html>
